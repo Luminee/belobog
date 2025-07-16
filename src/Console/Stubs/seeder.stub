@@ -1,0 +1,20 @@
+<?php
+
+namespace {$Namespace};
+
+use Luminee\Migrations\Base\SeederBaseModel;
+
+class {$Class} extends SeederBaseModel
+{
+    public $table = '';
+
+    /**
+     * Run the database seeds.
+     *
+     * @return void
+     */
+    public function run()
+    {
+        //
+    }
+}

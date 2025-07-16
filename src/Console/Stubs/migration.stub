@@ -1,0 +1,38 @@
+<?php
+
+namespace {$namespace};
+
+use Luminee\Migrate\Foundations\Migration;
+
+class {$class} extends Migration
+{
+	/**
+     * @var string
+     */
+    protected $table = '{$table}';
+	
+	/**
+	 * Run the migrations.
+	 *
+	 * @return void
+	 */
+	public function up()
+	{
+        $this->create()->engine();
+        $this->increments('id');
+
+        $this->timestamps();
+
+	}
+
+	/**
+     * Reverse the migrations.
+     *
+     * @return void
+     */
+    public function down()
+    {
+        // drop table
+    }
+
+}

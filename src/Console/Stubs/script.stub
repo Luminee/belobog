@@ -1,0 +1,28 @@
+<?php
+
+namespace {$Namespace};
+
+use Luminee\Migrations\Console\Supporters\Command;
+
+class {$Class} extends Command
+{
+    /**
+     * @var string
+     */
+    protected $signature = '{$sign}';
+
+    public function __construct()
+    {
+        parent::__construct();
+    }
+
+    /**
+     * Run the script.
+     *
+     * @return void
+     */
+    public function run()
+    {
+        //
+    }
+}

@@ -1,0 +1,36 @@
+{
+    "name": "luminee/belobog",
+    "description": "Generate and manage migrations for laravel",
+    "type": "library",
+    "license": "MIT",
+    "autoload": {
+        "psr-4": {
+            "Luminee\\Belobog\\": "src/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Luminee\\Belobog\\BelobogServiceProvider"
+            ]
+        }
+    },
+    "authors": [
+        {
+            "name": "LuminEe",
+            "email": "1123462990@qq.com"
+        }
+    ],
+    "minimum-stability": "stable",
+    "require": {
+        "php": ">=7.0",
+        "laravel/framework": "5.5.*",
+        "luminee/foundry": "dev-laravel5",
+        "luminee/chariot": "0.5.5.*"
+    },
+    "config": {
+        "allow-plugins": {
+            "kylekatarnls/update-helper": true
+        }
+    }
+}
