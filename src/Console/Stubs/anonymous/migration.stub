@@ -1,6 +1,6 @@
 <?php
 
-use Luminee\Migrate\Foundations\Migration;
+use Luminee\Belobog\Database\Migration;
 
 return new class extends Migration {
 

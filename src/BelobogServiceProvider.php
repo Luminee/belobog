@@ -2,6 +2,7 @@
 
 namespace Luminee\Belobog;
 
+use Luminee\Belobog\Console\Commands\MakeMigrationCommand;
 use Luminee\Foundry\Contracts\ServiceProvider;
 
 class BelobogServiceProvider extends ServiceProvider
@@ -15,10 +16,10 @@ class BelobogServiceProvider extends ServiceProvider
     {
         $this->publishConfig();
 
-        // $this->commands([
-        //     MakeMigrationCommand::class,
-        //     MigrateCommand::class,
-        // ]);
+        $this->commands([
+            MakeMigrationCommand::class,
+            // MigrateCommand::class,
+        ]);
     }
 
     /**

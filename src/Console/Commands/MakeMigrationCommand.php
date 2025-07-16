@@ -43,27 +43,7 @@ class MakeMigrationCommand extends Command
     /**
      * @var string
      */
-    protected $seeder_dir;
-
-    /**
-     * @var string
-     */
-    protected $script_dir;
-
-    /**
-     * @var string
-     */
     protected $migration_namespace;
-
-    /**
-     * @var string
-     */
-    protected $seeder_namespace;
-
-    /**
-     * @var string
-     */
-    protected $script_namespace;
 
     /**
      * Create a new command instance.
@@ -77,19 +57,15 @@ class MakeMigrationCommand extends Command
 
         $this->stub_dir = __DIR__ . '/../Stubs';
 
+        $this->initFilesystem();
+
         $this->bootDir();
     }
 
     protected function bootDir()
     {
-        $this->migration_dir = realpath(config('migrate.migrations.dir'));
-        $this->migration_namespace = config('migrate.migrations.namespace');
-
-        $this->seeder_dir = realpath(config('migrate.seeders.dir'));
-        $this->seeder_namespace = config('migrate.seeders.namespace');
-
-        $this->script_dir = realpath(config('migrate.scripts.dir'));
-        $this->script_namespace = config('migrate.scripts.namespace');
+        $this->migration_dir = realpath(config('belobog.migrations.dir'));
+        $this->migration_namespace = config('belobog.migrations.namespace');
     }
 
     /**
@@ -141,7 +117,7 @@ class MakeMigrationCommand extends Command
             exec("composer -o dump");
         }
 
-        $this->info("File $name.php Create Success!");
+        $this->info("File $name.php Create Success! [in $path]");
     }
 
     protected function getTable($migration)
