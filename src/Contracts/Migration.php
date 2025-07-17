@@ -175,10 +175,29 @@ abstract class Migration
     public function prepare()
     {
         $output = '';
+        $pretty = [];
         foreach ($this->getStatements() as $statement) {
+            $pretty[] = $this->pretty($statement);
             $output .= '::=> ' . $statement . "\r\n";
         }
-        return [$output, $this->localIte];
+        return [$output, $pretty, $this->localIte];
+    }
+
+    protected function pretty($statement)
+    {
+        if (strpos($statement, 'create table') !== 0) {
+            return [$statement];
+        }
+        preg_match('/\([^()]*(?:\([^()]*\)[^()]*)*\)/', $statement, $matches);
+        $column_str = substr($matches[0], 1, -1);
+        list($front, $end) = explode($column_str, $statement);
+        $pretty = [$front];
+        $columns = explode(',', $column_str);
+        foreach ($columns as $k => $column) {
+            $pretty[] = "    " . trim($column) . ($k == count($columns) - 1 ? '' : ',');
+        }
+        $pretty[] = $end;
+        return $pretty;
     }
 
     public function getSql()
