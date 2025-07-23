@@ -3,53 +3,63 @@
 namespace Luminee\Belobog\Console\Commands;
 
 use Illuminate\Support\Facades\DB;
-use Luminee\Belobog\Console\Concerns\MigrateConcern;
-use Luminee\Belobog\Database\Migration;
+use Luminee\Belobog\Console\Concerns\SeederConcern;
+use Luminee\Belobog\Database\Seeder;
+use ReflectionException;
 use Luminee\Chariot\Console\Command;
 use Luminee\Foundry\Concerns\Directory;
-use Luminee\Switcher\Switcher;
+use Luminee\Migrations\Base\SeederBaseModel;
 
-class MigrateCommand extends Command
+class SeedCommand extends Command
 {
-    use Directory, MigrateConcern;
+    use Directory, SeederConcern;
 
     /**
      * @var Switcher
      */
     protected $switcher;
 
-    /**
-     * @var string
-     */
-    protected $migration_dir;
-
-    /**
-     * @var string
-     */
-    protected $migration_namespace;
-
-    protected $migrations;
-
     protected $batch;
+
+    /**
+     * @var array
+     */
+    protected $seeders = [];
+
+    protected $database;
 
     protected $count;
 
     protected $run = false;
+
+    protected $dir;
+
+    /**
+     * @var string
+     */
+    protected $seeder_dir;
+
+    /**
+     * @var string
+     */
+    protected $seeder_namespace;
 
     /**
      * The name and signature of the console command.
      *
      * @var string
      */
-    protected $signature = 'luminee:migrate 
+    protected $signature = 'luminee:seed 
                             {directory? : Directory like project.module}
-                            {--conn= : Connection for migrate, <see switcher>}
+                            {--conn= : Connection for seed, <see switcher>}
                             {--class= : Which class to run, if is use the namespace}
                             {--table= : Which table to run}
                             {--except= : Except class, if is use the namespace}
                             {--except-table= : Except table} 
-                            {--deep : Migrate with sub directory migrations}
+                            {--deep : Seed with sub directory seeders}
                             {--common=}
+                            {--o|optimize}
+                            {--force : Force to seed even it has been seeded}
                             {--run}
                             {--pretty}
                             {--print}';
@@ -59,7 +69,7 @@ class MigrateCommand extends Command
      *
      * @var string
      */
-    protected $description = 'Migrate Database with project.module and connection';
+    protected $description = 'Seed with project.module and connection';
 
     /**
      * Create a new command instance.
@@ -77,8 +87,8 @@ class MigrateCommand extends Command
 
     protected function bootDir()
     {
-        $this->migration_dir = realpath(config('belobog.migrations.dir'));
-        $this->migration_namespace = config('belobog.migrations.namespace');
+        $this->seeder_dir = realpath(config('belobog.seeders.dir'));
+        $this->seeder_namespace = config('belobog.seeders.namespace');
     }
 
     /**
@@ -89,13 +99,17 @@ class MigrateCommand extends Command
      */
     public function handle()
     {
-        $dir = $this->migration_dir;
+        $dir = $this->seeder_dir;
         if ($this->argument('directory')) {
             $stulied = $this->stulyDirectory($this->argument('directory'));
             $dir .=  '/' . implode('/', $stulied);
         }
 
-        $this->migrateDirectories($dir);
+        if ($this->option('optimize')) {
+            exec("composer -o dump");
+        }
+
+        $this->seedDirectories($dir);
 
         $this->run = $this->option('run');
         if ($print = $this->option('print') || $this->option('pretty')) {
@@ -106,46 +120,45 @@ class MigrateCommand extends Command
             $this->count = 0;
             $this->comment('======== Connection on [' . $conn . '] ========');
             $this->switcher->run(function () use ($conn, $print) {
-                $this->prepareMigrationsTable();
-                foreach ($this->migrations as $migration => $item) {
+                $this->prepareSeederTable();
+                foreach ($this->seeders as $seeder => $item) {
                     if (empty($class = $item['class'] ?? null)) {
                         continue;
                     }
-                    if (!($class instanceof Migration)) {
+                    if (!($class instanceof Seeder)) {
                         continue;
                     }
                     $record = $item['record'] ?? null;
                     $class->init($conn, $print ? 0 : ($record->iteration ?? 0));
-                    $class->up();
                     $this->run ?
-                        $this->migrate($class, $migration, $record) :
-                        $this->print($class, $migration, $record);
+                        $this->seed($class, $seeder, $record) :
+                        $this->print($class, $seeder, $record);
                 }
             }, $conn);
             if ($this->run) {
-                $this->count == 0 ? $this->line("Nothing to migrate.") : $this->info("Migrate done!");
+                $this->count == 0 ? $this->line("Nothing to seed.") : $this->info("Seed done!");
             }
         }
     }
 
     /**
-     * Migrate directories.
+     * Seed directories.
      *
      * @param $dir
      */
-    protected function migrateDirectories($dir)
+    protected function seedDirectories($dir)
     {
-        foreach (scandir($dir) as $migration) {
-            if (in_array($migration, ['.', '..', '.gitkeep', '.gitignore'])) {
+        foreach (scandir($dir) as $seeder) {
+            if (in_array($seeder, ['.', '..', '.gitkeep', '.gitignore'])) {
                 continue;
             }
 
-            if (is_dir($dir . '/' . $migration)) {
+            if (is_dir($dir . '/' . $seeder)) {
                 if ($this->option('deep')) {
-                    $this->migrateDirectories($dir . '/' . $migration);
+                    $this->seedDirectories($dir . '/' . $seeder);
                 }
             } else {
-                $this->migrateClass($dir . '/' . $migration);
+                $this->seedClass($dir . '/' . $seeder);
             }
         }
     }
@@ -155,7 +168,7 @@ class MigrateCommand extends Command
      * 
      * @param $file
      */
-    protected function migrateClass($file)
+    protected function seedClass($file)
     {
         $classname = $this->getClassNameFromFile($file);
         if ($classname === false) {
@@ -177,45 +190,18 @@ class MigrateCommand extends Command
         if ($this->option('table') && $class->tableName() != $this->option('table')) {
             return;
         }
-        $migrate_file = basename($file, '.php');
-        $this->migrations[$migrate_file]['class'] = $class;
+        $seeder_file = basename($file, '.php');
+        $this->seeders[$seeder_file]['class'] = $class;
         return;
     }
 
-    protected function print(Migration $class, $name, $record)
+    protected function printSeeder($content)
     {
-        list($output, $pretty, $ite) = $class->prepare();
-        if (($record->iteration ?? 0) >= $ite && !$this->option('print')) {
-            return;
-        }
-        $this->comment($name . ' Sql: ');
-        if (!$this->option('pretty')) {
-            $this->line($output);
-        } else {
-            foreach ($pretty as $lines) {
-                foreach ($lines as $line) {
-                    $this->line($line);
-                }
-                $this->line('');
-            }
-        }
-    }
-
-    /**
-     * @param Migration $class
-     * @param $name
-     * @param $record
-     * @return void
-     */
-    protected function migrate(Migration $class, $name, $record)
-    {
-        $ite = $class->build();
-        if (($record->iteration ?? 0) >= $ite) {
-            $this->line("[$name] Has been migrate...");
-            return;
-        }
-        $this->recordMigrate($name, $record, $ite);
-        $this->info($name . ' Migrate.');
-        $this->count++;
+        list($_, $content) = explode("extends SeederBaseModel\n", $content);
+        $table = $this->getPregStr($content, '/\$table = \'(\S+)\'/');
+        $this->info('Table : ' . $table . "\r\n");
+        list($_, $content) = explode("public function run()\n", $content);
+        $function = ltrim(preg_replace("/}\n}$/", '', trim($content)), "{\n");
+        $this->line($function);
     }
 }

@@ -4,8 +4,7 @@ namespace {$namespace};
 
 use Luminee\Belobog\Database\Seeder;
 
-class {$class} extends Seeder
-{
+return new class extends Seeder {
 
     /**
      * @var string
