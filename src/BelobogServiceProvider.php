@@ -5,6 +5,7 @@ namespace Luminee\Belobog;
 use Luminee\Belobog\Console\Commands\MakeMigrationCommand;
 use Luminee\Belobog\Console\Commands\MakeSeederCommand;
 use Luminee\Belobog\Console\Commands\MigrateCommand;
+use Luminee\Belobog\Console\Commands\SeedCommand;
 use Luminee\Foundry\Contracts\ServiceProvider;
 
 class BelobogServiceProvider extends ServiceProvider
@@ -22,6 +23,7 @@ class BelobogServiceProvider extends ServiceProvider
             MakeMigrationCommand::class,
             MakeSeederCommand::class,
             MigrateCommand::class,
+            SeedCommand::class,
         ]);
     }
 

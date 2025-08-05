@@ -3,38 +3,15 @@
 namespace Luminee\Belobog\Console\Commands;
 
 use Illuminate\Support\Facades\DB;
-use Luminee\Belobog\Console\Concerns\MigrateConcern;
+use Luminee\Belobog\Console\Concerns\ExecuteConcern;
 use Luminee\Belobog\Database\Migration;
+use Luminee\Belobog\Enums\ExecutorEnum;
 use Luminee\Chariot\Console\Command;
 use Luminee\Foundry\Concerns\Directory;
-use Luminee\Switcher\Switcher;
 
 class MigrateCommand extends Command
 {
-    use Directory, MigrateConcern;
-
-    /**
-     * @var Switcher
-     */
-    protected $switcher;
-
-    /**
-     * @var string
-     */
-    protected $migration_dir;
-
-    /**
-     * @var string
-     */
-    protected $migration_namespace;
-
-    protected $migrations;
-
-    protected $batch;
-
-    protected $count;
-
-    protected $run = false;
+    use Directory, ExecuteConcern;
 
     /**
      * The name and signature of the console command.
@@ -50,7 +27,6 @@ class MigrateCommand extends Command
                             {--except-table= : Except table} 
                             {--deep : Migrate with sub directory migrations}
                             {--common=}
-                            {--run}
                             {--pretty}
                             {--print}';
 
@@ -73,12 +49,19 @@ class MigrateCommand extends Command
         $this->switcher = app('switcher');
 
         $this->bootDir();
+
+        $this->configs = [
+            'action' => 'migrate',
+            'table_name' => ExecutorEnum::MIGRATIONS,
+            'table_key' => ExecutorEnum::MIGRATION,
+            'create_file_name' => 'create_migrations_table.php',
+        ];
     }
 
     protected function bootDir()
     {
-        $this->migration_dir = realpath(config('belobog.migrations.dir'));
-        $this->migration_namespace = config('belobog.migrations.namespace');
+        $this->executor_dir = realpath(config('belobog.migrations.dir'));
+        $this->executor_namespace = config('belobog.migrations.namespace');
     }
 
     /**
@@ -89,97 +72,21 @@ class MigrateCommand extends Command
      */
     public function handle()
     {
-        $dir = $this->migration_dir;
-        if ($this->argument('directory')) {
-            $stulied = $this->stulyDirectory($this->argument('directory'));
-            $dir .=  '/' . implode('/', $stulied);
-        }
+        $this->handleDirectories($this->prepareDir($this->executor_dir));
 
-        $this->migrateDirectories($dir);
+        $this->prepareRunAndPrint();
 
-        $this->run = $this->option('run');
-        if ($print = $this->option('print') || $this->option('pretty')) {
-            $this->run = false;
-        }
-
-        foreach (explode(',', $this->option('conn') ?: DB::getDefaultConnection()) as $conn) {
-            $this->count = 0;
-            $this->comment('======== Connection on [' . $conn . '] ========');
-            $this->switcher->run(function () use ($conn, $print) {
-                $this->prepareMigrationsTable();
-                foreach ($this->migrations as $migration => $item) {
-                    if (empty($class = $item['class'] ?? null)) {
-                        continue;
-                    }
-                    if (!($class instanceof Migration)) {
-                        continue;
-                    }
-                    $record = $item['record'] ?? null;
-                    $class->init($conn, $print ? 0 : ($record->iteration ?? 0));
-                    $class->up();
-                    $this->run ?
-                        $this->migrate($class, $migration, $record) :
-                        $this->print($class, $migration, $record);
-                }
-            }, $conn);
-            if ($this->run) {
-                $this->count == 0 ? $this->line("Nothing to migrate.") : $this->info("Migrate done!");
-            }
-        }
-    }
-
-    /**
-     * Migrate directories.
-     *
-     * @param $dir
-     */
-    protected function migrateDirectories($dir)
-    {
-        foreach (scandir($dir) as $migration) {
-            if (in_array($migration, ['.', '..', '.gitkeep', '.gitignore'])) {
-                continue;
-            }
-
-            if (is_dir($dir . '/' . $migration)) {
-                if ($this->option('deep')) {
-                    $this->migrateDirectories($dir . '/' . $migration);
-                }
-            } else {
-                $this->migrateClass($dir . '/' . $migration);
-            }
-        }
-    }
-
-    /**
-     * Get class for migrate.
-     * 
-     * @param $file
-     */
-    protected function migrateClass($file)
-    {
-        $classname = $this->getClassNameFromFile($file);
-        if ($classname === false) {
-            $this->error("Can not instance the class in file [$file]");
-            return;
-        }
-        if ($classname === null) {
-            $class = require_once $file;
-        } else {
-            $base_class_name = basename(str_replace('\\', '/', $classname));
-            if ($this->option('class') && $base_class_name != $this->option('class')) {
+        $this->switcherRun(function ($executor, $item, $conn) {
+            if (empty($class = $item['class'] ?? null) || !($class instanceof Migration)) {
                 return;
             }
-            if ($this->option('except') && $base_class_name == $this->option('except')) {
-                return;
-            }
-            $class = new $classname();
-        }
-        if ($this->option('table') && $class->tableName() != $this->option('table')) {
-            return;
-        }
-        $migrate_file = basename($file, '.php');
-        $this->migrations[$migrate_file]['class'] = $class;
-        return;
+            $record = $item['record'] ?? null;
+            $class->init($conn, $this->print ? 0 : ($record->iteration ?? 0));
+            $class->up();
+            $this->run ?
+                $this->migrate($class, $executor, $record) :
+                $this->print($class, $executor, $record);
+        }, explode(',', $this->option('conn') ?: DB::getDefaultConnection()));
     }
 
     protected function print(Migration $class, $name, $record)
@@ -214,7 +121,7 @@ class MigrateCommand extends Command
             $this->line("[$name] Has been migrate...");
             return;
         }
-        $this->recordMigrate($name, $record, $ite);
+        $this->recordExecutor($name, $record, $ite);
         $this->info($name . ' Migrate.');
         $this->count++;
     }

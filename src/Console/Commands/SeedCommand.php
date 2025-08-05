@@ -2,47 +2,19 @@
 
 namespace Luminee\Belobog\Console\Commands;
 
+use Exception;
 use Illuminate\Support\Facades\DB;
-use Luminee\Belobog\Console\Concerns\SeederConcern;
+use Luminee\Belobog\Console\Concerns\ExecuteConcern;
 use Luminee\Belobog\Database\Seeder;
-use ReflectionException;
+use Luminee\Belobog\Enums\ExecutorEnum;
 use Luminee\Chariot\Console\Command;
 use Luminee\Foundry\Concerns\Directory;
-use Luminee\Migrations\Base\SeederBaseModel;
+use ReflectionClass;
+use ReflectionMethod;
 
 class SeedCommand extends Command
 {
-    use Directory, SeederConcern;
-
-    /**
-     * @var Switcher
-     */
-    protected $switcher;
-
-    protected $batch;
-
-    /**
-     * @var array
-     */
-    protected $seeders = [];
-
-    protected $database;
-
-    protected $count;
-
-    protected $run = false;
-
-    protected $dir;
-
-    /**
-     * @var string
-     */
-    protected $seeder_dir;
-
-    /**
-     * @var string
-     */
-    protected $seeder_namespace;
+    use Directory, ExecuteConcern;
 
     /**
      * The name and signature of the console command.
@@ -60,7 +32,6 @@ class SeedCommand extends Command
                             {--common=}
                             {--o|optimize}
                             {--force : Force to seed even it has been seeded}
-                            {--run}
                             {--pretty}
                             {--print}';
 
@@ -83,12 +54,19 @@ class SeedCommand extends Command
         $this->switcher = app('switcher');
 
         $this->bootDir();
+
+        $this->configs = [
+            'action' => 'seed',
+            'table_name' => ExecutorEnum::SEEDERS,
+            'table_key' => ExecutorEnum::SEEDER,
+            'create_file_name' => 'create_seeders_table.php',
+        ];
     }
 
     protected function bootDir()
     {
-        $this->seeder_dir = realpath(config('belobog.seeders.dir'));
-        $this->seeder_namespace = config('belobog.seeders.namespace');
+        $this->executor_dir = realpath(config('belobog.seeders.dir'));
+        $this->executor_namespace = config('belobog.seeders.namespace');
     }
 
     /**
@@ -99,109 +77,77 @@ class SeedCommand extends Command
      */
     public function handle()
     {
-        $dir = $this->seeder_dir;
-        if ($this->argument('directory')) {
-            $stulied = $this->stulyDirectory($this->argument('directory'));
-            $dir .=  '/' . implode('/', $stulied);
-        }
-
         if ($this->option('optimize')) {
             exec("composer -o dump");
         }
 
-        $this->seedDirectories($dir);
+        $this->handleDirectories($this->prepareDir($this->executor_dir));
 
-        $this->run = $this->option('run');
-        if ($print = $this->option('print') || $this->option('pretty')) {
-            $this->run = false;
-        }
+        $print = $this->prepareRunAndPrint();
 
-        foreach (explode(',', $this->option('conn') ?: DB::getDefaultConnection()) as $conn) {
-            $this->count = 0;
-            $this->comment('======== Connection on [' . $conn . '] ========');
-            $this->switcher->run(function () use ($conn, $print) {
-                $this->prepareSeederTable();
-                foreach ($this->seeders as $seeder => $item) {
-                    if (empty($class = $item['class'] ?? null)) {
-                        continue;
-                    }
-                    if (!($class instanceof Seeder)) {
-                        continue;
-                    }
-                    $record = $item['record'] ?? null;
-                    $class->init($conn, $print ? 0 : ($record->iteration ?? 0));
-                    $this->run ?
-                        $this->seed($class, $seeder, $record) :
-                        $this->print($class, $seeder, $record);
-                }
-            }, $conn);
-            if ($this->run) {
-                $this->count == 0 ? $this->line("Nothing to seed.") : $this->info("Seed done!");
-            }
-        }
-    }
-
-    /**
-     * Seed directories.
-     *
-     * @param $dir
-     */
-    protected function seedDirectories($dir)
-    {
-        foreach (scandir($dir) as $seeder) {
-            if (in_array($seeder, ['.', '..', '.gitkeep', '.gitignore'])) {
-                continue;
-            }
-
-            if (is_dir($dir . '/' . $seeder)) {
-                if ($this->option('deep')) {
-                    $this->seedDirectories($dir . '/' . $seeder);
-                }
-            } else {
-                $this->seedClass($dir . '/' . $seeder);
-            }
-        }
-    }
-
-    /**
-     * Get class for migrate.
-     * 
-     * @param $file
-     */
-    protected function seedClass($file)
-    {
-        $classname = $this->getClassNameFromFile($file);
-        if ($classname === false) {
-            $this->error("Can not instance the class in file [$file]");
-            return;
-        }
-        if ($classname === null) {
-            $class = require_once $file;
-        } else {
-            $base_class_name = basename(str_replace('\\', '/', $classname));
-            if ($this->option('class') && $base_class_name != $this->option('class')) {
+        $this->switcherRun(function ($executor, $item, $conn) use ($print) {
+            if (empty($class = $item['class'] ?? null) || !($class instanceof Seeder)) {
                 return;
             }
-            if ($this->option('except') && $base_class_name == $this->option('except')) {
-                return;
-            }
-            $class = new $classname();
-        }
-        if ($this->option('table') && $class->tableName() != $this->option('table')) {
-            return;
-        }
-        $seeder_file = basename($file, '.php');
-        $this->seeders[$seeder_file]['class'] = $class;
-        return;
+            $record = $item['record'] ?? null;
+            $class->init($conn, $print ? 0 : ($record->iteration ?? 0));
+            $this->run ?
+                $this->seed($class, $executor, $record) :
+                $this->print($class, $executor, $record, $item['file']);
+        }, explode(',', $this->option('conn') ?: DB::getDefaultConnection()));
     }
 
-    protected function printSeeder($content)
+    protected function seed(Seeder $class, $executor, $record)
     {
-        list($_, $content) = explode("extends SeederBaseModel\n", $content);
-        $table = $this->getPregStr($content, '/\$table = \'(\S+)\'/');
-        $this->info('Table : ' . $table . "\r\n");
-        list($_, $content) = explode("public function run()\n", $content);
-        $function = ltrim(preg_replace("/}\n}$/", '', trim($content)), "{\n");
-        $this->line($function);
+        if (($record->iteration ?? 0) >= $class->getIteration()) {
+            $this->line("[$executor] Has been seed...");
+            return;
+        }
+        $class->run();
+        $ite = $class->getIteration();
+        $this->recordExecutor($executor, $record, $ite);
+        $this->info($executor . ' Seed.');
+        $this->count++;
+    }
+
+    protected function print(Seeder $class, $executor, $record, $file)
+    {
+        if (($record->iteration ?? 0) >= $class->getIteration() && !$this->option('print')) {
+            return;
+        }
+        $this->comment($executor . ' Seeder: ');
+        try {
+            // 读取文件内容
+            $fileContent = file($file);
+
+            // 通过反射获取表名
+            $reflection = new ReflectionClass($class);
+            $tableProperty = $reflection->getProperty('table');
+            $tableProperty->setAccessible(true);
+            $table = $tableProperty->getValue($class);
+
+            if ($table) {
+                $this->info('Table : ' . $table . "\r\n");
+            }
+
+            // 使用反射获取 run 方法
+            $reflection = new ReflectionMethod($class, 'run');
+
+            // 获取方法所在的文件和起始/结束行
+            $startLine = $reflection->getStartLine() - 1;
+            $endLine = $reflection->getEndLine();
+
+            // 提取方法体内容（去掉方法声明）
+            $methodBody = array_slice($fileContent, $startLine, $endLine - $startLine);
+            $content = '';
+            foreach ($methodBody as $k => $line) {
+                $content .= in_array($k, [0, 1, count($methodBody) - 1]) ? "<fg=blue>" . $line . "</fg=blue>" : $line;
+            }
+
+            // 输出方法内容
+            $this->line($content);
+        } catch (Exception $e) {
+            $this->error("无法获取方法内容: " . $e->getMessage());
+        }
     }
 }

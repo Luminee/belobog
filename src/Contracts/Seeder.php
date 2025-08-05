@@ -49,17 +49,32 @@ abstract class Seeder
         return $this->table;
     }
 
+    public function getIteration()
+    {
+        return $this->iteration;
+    }
+
+    protected function initIteration()
+    {
+        $this->iteration = 0;
+    }
+
+    protected function newIteration()
+    {
+        $this->iteration++;
+    }
+
     protected function checkColumns($attributes)
     {
         $column_map = $this->getColumnsInfomation();
-        $columns = array_column($column_map, 'column_name');
+        $columns = array_column($column_map, 'COLUMN_NAME');
         $checkTimestamp = count(array_diff($this->timeFields, $columns)) == 0;
         foreach ($column_map as $column) {
-            $name = $column->column_name;
+            $name = $column->COLUMN_NAME;
             if ($name == 'id' || isset($attributes[$name])) {
                 continue;
             }
-            if ($column->is_nullable == 'NO') {
+            if ($column->IS_NULLABLE == 'NO') {
                 $this->fillAttributesIfNull($column, $attributes, $name);
             }
             if (in_array($name, $this->timeFields) && $checkTimestamp) {
@@ -75,13 +90,13 @@ abstract class Seeder
 
     protected function fillAttributesIfNull($column, $attributes, $name)
     {
-        if (!is_null($column->character_maximum_length)) {
+        if (!is_null($column->CHARACTER_MAXIMUM_LENGTH)) {
             $attributes[$name] = '';
         }
-        if (!is_null($column->numeric_precision)) {
+        if (!is_null($column->NUMERIC_PRECISION)) {
             $attributes[$name] = 0;
         }
-        if (!is_null($column->datetime_precision)) {
+        if (!is_null($column->DATETIME_PRECISION)) {
             $attributes[$name] = date('Y-m-d H:i:s');
         }
     }

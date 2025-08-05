@@ -8,7 +8,7 @@ return new class extends Migration {
     /**
      * @var string
      */
-    protected $table = ExecutorEnum::MIGRATIONS;
+    protected $table = ExecutorEnum::SEEDERS;
 
     /**
      * Run the migrations.
@@ -19,7 +19,7 @@ return new class extends Migration {
     {
         $this->create()->engine();
         $this->increments('id');
-        $this->string(ExecutorEnum::MIGRATION);
+        $this->string(ExecutorEnum::SEEDER);
         $this->tinyInteger('iteration');
         $this->integer('batch')->default(1);
         $this->text('record');
