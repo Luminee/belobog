@@ -7,6 +7,13 @@ use Luminee\Belobog\Database\Seeder;
 return new class extends Seeder {
 
     /**
+     * 是否使用迭代
+     *
+     * @var bool
+     */
+    protected $useIteration = true;
+    
+    /**
      * @var string
      */
     protected $table = '{$table}';

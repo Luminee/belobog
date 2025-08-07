@@ -3,31 +3,12 @@
 namespace Luminee\Belobog\Contracts;
 
 use Illuminate\Support\Fluent;
-use Illuminate\Database\Connection;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Database\Schema\Grammars\Grammar;
 use Illuminate\Database\Schema\Grammars\MySqlGrammar;
-use Illuminate\Support\Facades\DB;
 
-abstract class Migration
+abstract class Migration extends Belobog
 {
-    protected $database;
-
-    protected $conn;
-
-    protected $iteration;
-
-    protected $localIte = 0;
-
-    protected $table;
-
-    /**
-     * The database connection instance.
-     *
-     * @var Connection
-     */
-    protected $connection;
-
     /**
      * The schema grammar instance.
      *
@@ -157,19 +138,12 @@ abstract class Migration
         $this->grammar = new MySqlGrammar();
     }
 
-    public function init($conn, $iteration)
-    {
-        $this->connection = DB::connection();
-        $this->conn = $conn;
-        $this->iteration = $iteration;
-    }
-
     public function build()
     {
         foreach ($this->getStatements() as $statement) {
             $this->connection->statement($statement);
         }
-        return $this->localIte;
+        return $this->localIteration;
     }
 
     public function prepare()
@@ -180,7 +154,7 @@ abstract class Migration
             $pretty[] = $this->pretty($statement);
             $output .= '::=> ' . $statement . "\r\n";
         }
-        return [$output, $pretty, $this->localIte];
+        return [$output, $pretty, $this->localIteration];
     }
 
     protected function pretty($statement)
@@ -217,7 +191,7 @@ abstract class Migration
 
             $this->statements[] = $statement;
         }
-        if ($this->localIte <= $this->iteration) $this->statements = [];
+        if ($this->localIteration <= $this->iteration) $this->statements = [];
         $this->need_to_sql = false;
     }
 
@@ -235,7 +209,7 @@ abstract class Migration
         if ($this->need_to_sql)
             $this->toSql();
         $this->need_to_sql = true;
-        $this->localIte++;
+        $this->localIteration++;
 
         $this->modify = [];
         $this->removeModifyPrimaryKey = false;
@@ -294,11 +268,6 @@ abstract class Migration
             $items[$key] = $imp . $item;
         }
         return implode('', $items);
-    }
-
-    public function tableName()
-    {
-        return $this->table;
     }
 
     /**

@@ -90,7 +90,7 @@ class SeedCommand extends Command
                 return;
             }
             $record = $item['record'] ?? null;
-            $class->init($conn, $print ? 0 : ($record->iteration ?? 0));
+            $class->init($conn, $print ? 0 : ($record->iteration ?? 0), $this->run);
             $this->run ?
                 $this->seed($class, $executor, $record) :
                 $this->print($class, $executor, $record, $item['file']);
@@ -99,12 +99,12 @@ class SeedCommand extends Command
 
     protected function seed(Seeder $class, $executor, $record)
     {
-        if (($record->iteration ?? 0) >= $class->getIteration()) {
+        $class->run();
+        $ite = $class->getLocalIteration();
+        if ($class->isUseIteration() && ($record->iteration ?? 0) >= $ite) {
             $this->line("[$executor] Has been seed...");
             return;
         }
-        $class->run();
-        $ite = $class->getIteration();
         $this->recordExecutor($executor, $record, $ite);
         $this->info($executor . ' Seed.');
         $this->count++;
@@ -112,7 +112,10 @@ class SeedCommand extends Command
 
     protected function print(Seeder $class, $executor, $record, $file)
     {
-        if (($record->iteration ?? 0) >= $class->getIteration() && !$this->option('print')) {
+        if ($class->isUseIteration()) {
+            $class->run();
+        }
+        if (($record->iteration ?? 0) >= $class->getLocalIteration() && !$this->option('print')) {
             return;
         }
         $this->comment($executor . ' Seeder: ');
@@ -126,6 +129,10 @@ class SeedCommand extends Command
             $tableProperty->setAccessible(true);
             $table = $tableProperty->getValue($class);
 
+            if ($class->isUseIteration()) {
+                $this->info('Record Iteration : ' . ($record->iteration ?? 0));
+                $this->info('Local Iteration : ' . $class->getLocalIteration() . "\r\n");
+            }
             if ($table) {
                 $this->info('Table : ' . $table . "\r\n");
             }

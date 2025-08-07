@@ -5,63 +5,30 @@ namespace Luminee\Belobog\Contracts;
 use Exception;
 use Illuminate\Support\Facades\DB;
 
-abstract class Seeder
+abstract class Seeder extends Belobog
 {
     /**
-     * @var string
+     * 是否使用迭代
+     *
+     * @var bool
      */
-    protected $table;
-
-    /**
-     * @var string
-     */
-    protected $database;
-
-    /**
-     * @var string
-     */
-    protected $connection;
-
-    /**
-     * @var string
-     */
-    protected $conn;
-
-    /**
-     * @var int
-     */
-    protected $iteration;
+    protected $useIteration = false;
 
     protected $timeFields = ['created_at', 'updated_at'];
 
     public function __construct() {}
 
-    public function init($conn, $iteration)
+    public function isUseIteration()
     {
-        $this->connection = DB::connection();
-        $this->database = DB::getDatabaseName();
-        $this->conn = $conn;
-        $this->iteration = $iteration;
+        return $this->useIteration;
     }
 
-    public function tableName()
+    protected function newIteration($closure = null)
     {
-        return $this->table;
-    }
-
-    public function getIteration()
-    {
-        return $this->iteration;
-    }
-
-    protected function initIteration()
-    {
-        $this->iteration = 0;
-    }
-
-    protected function newIteration()
-    {
-        $this->iteration++;
+        $this->localIteration++;
+        if ($this->run && $closure && $this->localIteration > $this->iteration) {
+            $closure();
+        }
     }
 
     protected function checkColumns($attributes)
