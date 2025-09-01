@@ -2,29 +2,24 @@
 
 namespace Luminee\Belobog\Console\Commands;
 
-use Illuminate\Contracts\Filesystem\FileNotFoundException;
 use Illuminate\Support\Str;
-use Luminee\Belobog\Console\Concerns\MakeConcern;
 use Luminee\Chariot\Console\Command;
 use Luminee\Foundry\Concerns\Directory;
 
-/**
- * @author LuminEe
- */
-class MakeSeederCommand extends Command
+class MakeScriptCommand extends Command
 {
-    use Directory, MakeConcern;
+    use Directory;
 
     /**
      * The name and signature of the console command.
      *
      * @var string
      */
-    protected $signature = 'luminee:make:seeder 
-                            {directory : The directory of the seeder, like project.module. If seeder is not set, directory will be used as seeder name} 
-                            {seeder? : The name of the seeder, like init_users_seeder. If seeder is not set, directory will be used as seeder name} 
-                            {--table= : The table name to seed} 
-                            {--a|anonymous : Make anonymous seeder}
+    protected $signature = 'luminee:make:migration 
+                            {directory : The directory of the migration, like project.module. If migration is not set, directory will be used as migration name} 
+                            {migration? : The name of the migration, like create_users_table. If migration is not set, directory will be used as migration name} 
+                            {--table= : The table name to migrate} 
+                            {--a|anonymous : Make anonymous migration}
                             {--o|optimize}';
 
     /**
@@ -32,7 +27,7 @@ class MakeSeederCommand extends Command
      *
      * @var string
      */
-    protected $description = 'Make seeder to project.module direction';
+    protected $description = 'Make migration to project.module direction';
 
     /**
      * @var string
@@ -42,12 +37,12 @@ class MakeSeederCommand extends Command
     /**
      * @var string
      */
-    protected $seeder_dir;
+    protected $migration_dir;
 
     /**
      * @var string
      */
-    protected $seeder_namespace;
+    protected $migration_namespace;
 
     /**
      * Create a new command instance.
@@ -67,21 +62,20 @@ class MakeSeederCommand extends Command
 
     protected function bootDir()
     {
-        $this->seeder_dir = realpath(config('belobog.seeders.dir'));
-        $this->seeder_namespace = config('belobog.seeders.namespace');
+        $this->migration_dir = realpath(config('belobog.migrations.dir'));
+        $this->migration_namespace = config('belobog.migrations.namespace');
     }
 
     /**
      * Execute the console command.
      *
-     * @return void
-     * @throws
+     * @return mixed
      */
     public function handle()
     {
-        $dir = $this->seeder_dir;
-        $namespace = $this->seeder_namespace;
-        if ($seeder = $this->argument('seeder')) {
+        $dir = $this->migration_dir;
+        $namespace = $this->migration_namespace;
+        if ($migration = $this->argument('migration')) {
             $stulied = $this->stulyDirectory($this->argument('directory'));
             $dir .=  '/' . implode('/', $stulied);
             $this->makeDirectory($dir);
@@ -90,19 +84,15 @@ class MakeSeederCommand extends Command
                 $namespace .= '\\' . implode('\\', $stulied);
             }
         } else {
-            $seeder = $this->argument('directory');
+            $migration = $this->argument('directory');
         }
-        $this->createSeeder($seeder, $namespace, $dir);
+
+        $this->createMigration($migration, $namespace, $dir);
     }
 
-    /**
-     * @param $seeder
-     * @param $namespace
-     * @param $path
-     */
-    protected function createSeeder($seeder, $namespace, $path)
+    protected function createMigration($migration, $namespace, $path)
     {
-        $class = Str::studly($seeder);
+        $class = Str::studly($migration);
         if ($namespace) {
             $full_class = $namespace . '\\' . $class;
             if (class_exists($full_class)) {
@@ -111,14 +101,14 @@ class MakeSeederCommand extends Command
             }
         }
 
-        $seeder_dir = $namespace && !$this->option('anonymous') ? '' : '/anonymous';
-        $stub_file = $this->stub_dir . $seeder_dir . "/seeder.stub";
+        $migration_dir = $namespace && !$this->option('anonymous') ? '' : '/anonymous';
+        $stub_file = $this->stub_dir . $migration_dir . "/migration.stub";
         $stub = $this->files->get($stub_file);
         $search = ['{$namespace}', '{$class}', '{$table}'];
-        $replace = [$namespace, $class, $this->getTable()];
+        $replace = [$namespace, $class, $this->getTable($migration)];
         $stub = str_replace($search, $replace, $stub);
 
-        $name = date('Y_m_d_His') . '_' . $seeder;
+        $name = date('Y_m_d_His') . '_' . $migration;
         $file = $path . '/' . $name . '.php';
         $this->files->put($file, $stub);
         if ($this->option('optimize')) {
@@ -128,10 +118,13 @@ class MakeSeederCommand extends Command
         $this->info("File $name.php Create Success! [in $path]");
     }
 
-    protected function getTable()
+    protected function getTable($migration)
     {
         if ($this->option('table')) {
             return $this->option('table');
+        }
+        if (preg_match('/^(create|update)_(\w+)_table$/', $migration, $matches)) {
+            return $matches[2];
         }
         return '';
     }

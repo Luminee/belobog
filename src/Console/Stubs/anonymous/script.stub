@@ -1,11 +1,9 @@
 <?php
 
-namespace {$namespace};
-
 use Luminee\Chariot\Console\Command;
 
-class {$class} extends Command
-{
+return new class extends Command {
+
     /**
      * @var string
      */

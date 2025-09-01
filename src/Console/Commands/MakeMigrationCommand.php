@@ -3,12 +3,13 @@
 namespace Luminee\Belobog\Console\Commands;
 
 use Illuminate\Support\Str;
+use Luminee\Belobog\Console\Concerns\MakeConcern;
 use Luminee\Chariot\Console\Command;
 use Luminee\Foundry\Concerns\Directory;
 
 class MakeMigrationCommand extends Command
 {
-    use Directory;
+    use Directory, MakeConcern;
 
     /**
      * The name and signature of the console command.
@@ -30,21 +31,6 @@ class MakeMigrationCommand extends Command
     protected $description = 'Make migration to project.module direction';
 
     /**
-     * @var string
-     */
-    protected $stub_dir;
-
-    /**
-     * @var string
-     */
-    protected $migration_dir;
-
-    /**
-     * @var string
-     */
-    protected $migration_namespace;
-
-    /**
      * Create a new command instance.
      *
      * @return void
@@ -62,8 +48,8 @@ class MakeMigrationCommand extends Command
 
     protected function bootDir()
     {
-        $this->migration_dir = realpath(config('belobog.migrations.dir'));
-        $this->migration_namespace = config('belobog.migrations.namespace');
+        $this->executor_dir = realpath(config('belobog.migrations.dir'));
+        $this->executor_namespace = config('belobog.migrations.namespace');
     }
 
     /**
@@ -73,8 +59,8 @@ class MakeMigrationCommand extends Command
      */
     public function handle()
     {
-        $dir = $this->migration_dir;
-        $namespace = $this->migration_namespace;
+        $dir = $this->executor_dir;
+        $namespace = $this->executor_namespace;
         if ($migration = $this->argument('migration')) {
             $stulied = $this->stulyDirectory($this->argument('directory'));
             $dir .=  '/' . implode('/', $stulied);
