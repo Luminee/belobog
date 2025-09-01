@@ -2,7 +2,6 @@
 
 namespace Luminee\Belobog\Console\Commands;
 
-use Illuminate\Contracts\Filesystem\FileNotFoundException;
 use Illuminate\Support\Str;
 use Luminee\Belobog\Console\Concerns\MakeConcern;
 use Luminee\Chariot\Console\Command;
@@ -35,21 +34,6 @@ class MakeSeederCommand extends Command
     protected $description = 'Make seeder to project.module direction';
 
     /**
-     * @var string
-     */
-    protected $stub_dir;
-
-    /**
-     * @var string
-     */
-    protected $seeder_dir;
-
-    /**
-     * @var string
-     */
-    protected $seeder_namespace;
-
-    /**
      * Create a new command instance.
      *
      * @return void
@@ -62,13 +46,7 @@ class MakeSeederCommand extends Command
 
         $this->initFilesystem();
 
-        $this->bootDir();
-    }
-
-    protected function bootDir()
-    {
-        $this->seeder_dir = realpath(config('belobog.seeders.dir'));
-        $this->seeder_namespace = config('belobog.seeders.namespace');
+        $this->bootDir('seeders');
     }
 
     /**
@@ -79,20 +57,7 @@ class MakeSeederCommand extends Command
      */
     public function handle()
     {
-        $dir = $this->seeder_dir;
-        $namespace = $this->seeder_namespace;
-        if ($seeder = $this->argument('seeder')) {
-            $stulied = $this->stulyDirectory($this->argument('directory'));
-            $dir .=  '/' . implode('/', $stulied);
-            $this->makeDirectory($dir);
-
-            if ($namespace) {
-                $namespace .= '\\' . implode('\\', $stulied);
-            }
-        } else {
-            $seeder = $this->argument('directory');
-        }
-        $this->createSeeder($seeder, $namespace, $dir);
+        $this->createSeeder(...$this->prepareExecutor('seeder'));
     }
 
     /**
@@ -103,29 +68,16 @@ class MakeSeederCommand extends Command
     protected function createSeeder($seeder, $namespace, $path)
     {
         $class = Str::studly($seeder);
-        if ($namespace) {
-            $full_class = $namespace . '\\' . $class;
-            if (class_exists($full_class)) {
-                $this->error("Class $full_class Has Exist!");
-                return;
-            }
+        if ($this->checkFullClassExists($namespace, $class)) {
+            return;
         }
 
-        $seeder_dir = $namespace && !$this->option('anonymous') ? '' : '/anonymous';
-        $stub_file = $this->stub_dir . $seeder_dir . "/seeder.stub";
-        $stub = $this->files->get($stub_file);
+        $stub = $this->getStubContent($namespace, 'seeder');
         $search = ['{$namespace}', '{$class}', '{$table}'];
         $replace = [$namespace, $class, $this->getTable()];
         $stub = str_replace($search, $replace, $stub);
 
-        $name = date('Y_m_d_His') . '_' . $seeder;
-        $file = $path . '/' . $name . '.php';
-        $this->files->put($file, $stub);
-        if ($this->option('optimize')) {
-            exec("composer -o dump");
-        }
-
-        $this->info("File $name.php Create Success! [in $path]");
+        $this->makeExecutorFile($seeder, $path, $stub);
     }
 
     protected function getTable()

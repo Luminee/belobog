@@ -43,13 +43,7 @@ class MakeMigrationCommand extends Command
 
         $this->initFilesystem();
 
-        $this->bootDir();
-    }
-
-    protected function bootDir()
-    {
-        $this->executor_dir = realpath(config('belobog.migrations.dir'));
-        $this->executor_namespace = config('belobog.migrations.namespace');
+        $this->bootDir('migrations');
     }
 
     /**
@@ -59,49 +53,22 @@ class MakeMigrationCommand extends Command
      */
     public function handle()
     {
-        $dir = $this->executor_dir;
-        $namespace = $this->executor_namespace;
-        if ($migration = $this->argument('migration')) {
-            $stulied = $this->stulyDirectory($this->argument('directory'));
-            $dir .=  '/' . implode('/', $stulied);
-            $this->makeDirectory($dir);
-
-            if ($namespace) {
-                $namespace .= '\\' . implode('\\', $stulied);
-            }
-        } else {
-            $migration = $this->argument('directory');
-        }
-
-        $this->createMigration($migration, $namespace, $dir);
+        $this->createMigration(...$this->prepareExecutor('migration'));
     }
 
     protected function createMigration($migration, $namespace, $path)
     {
         $class = Str::studly($migration);
-        if ($namespace) {
-            $full_class = $namespace . '\\' . $class;
-            if (class_exists($full_class)) {
-                $this->error("Class $full_class Has Exist!");
-                return;
-            }
+        if ($this->checkFullClassExists($namespace, $class)) {
+            return;
         }
 
-        $migration_dir = $namespace && !$this->option('anonymous') ? '' : '/anonymous';
-        $stub_file = $this->stub_dir . $migration_dir . "/migration.stub";
-        $stub = $this->files->get($stub_file);
+        $stub = $this->getStubContent($namespace, 'migration');
         $search = ['{$namespace}', '{$class}', '{$table}'];
         $replace = [$namespace, $class, $this->getTable($migration)];
         $stub = str_replace($search, $replace, $stub);
 
-        $name = date('Y_m_d_His') . '_' . $migration;
-        $file = $path . '/' . $name . '.php';
-        $this->files->put($file, $stub);
-        if ($this->option('optimize')) {
-            exec("composer -o dump");
-        }
-
-        $this->info("File $name.php Create Success! [in $path]");
+        $this->makeExecutorFile($migration, $path, $stub);
     }
 
     protected function getTable($migration)
