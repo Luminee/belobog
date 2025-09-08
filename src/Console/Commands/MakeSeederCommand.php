@@ -4,6 +4,7 @@ namespace Luminee\Belobog\Console\Commands;
 
 use Illuminate\Support\Str;
 use Luminee\Belobog\Console\Concerns\MakeConcern;
+use Luminee\Belobog\Enums\ExecutorEnum;
 use Luminee\Chariot\Console\Command;
 use Luminee\Foundry\Concerns\Directory;
 
@@ -46,7 +47,7 @@ class MakeSeederCommand extends Command
 
         $this->initFilesystem();
 
-        $this->bootDir('seeders');
+        $this->bootDir(ExecutorEnum::SEEDERS);
     }
 
     /**
@@ -57,7 +58,7 @@ class MakeSeederCommand extends Command
      */
     public function handle()
     {
-        $this->createSeeder(...$this->prepareExecutor('seeder'));
+        $this->createSeeder(...$this->prepareExecutor(ExecutorEnum::SEEDER));
     }
 
     /**
@@ -72,7 +73,7 @@ class MakeSeederCommand extends Command
             return;
         }
 
-        $stub = $this->getStubContent($namespace, 'seeder');
+        $stub = $this->getStubContent($namespace, ExecutorEnum::SEEDER);
         $search = ['{$namespace}', '{$class}', '{$table}'];
         $replace = [$namespace, $class, $this->getTable()];
         $stub = str_replace($search, $replace, $stub);

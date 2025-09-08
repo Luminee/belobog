@@ -4,6 +4,7 @@ namespace Luminee\Belobog\Console\Commands;
 
 use Illuminate\Support\Str;
 use Luminee\Belobog\Console\Concerns\MakeConcern;
+use Luminee\Belobog\Enums\ExecutorEnum;
 use Luminee\Chariot\Console\Command;
 use Luminee\Foundry\Concerns\Directory;
 
@@ -42,7 +43,7 @@ class MakeScriptCommand extends Command
 
         $this->initFilesystem();
 
-        $this->bootDir('scripts');
+        $this->bootDir(ExecutorEnum::SCRIPTS);
     }
 
     /**
@@ -52,7 +53,7 @@ class MakeScriptCommand extends Command
      */
     public function handle()
     {
-        $this->createScript(...$this->prepareExecutor('script'));
+        $this->createScript(...$this->prepareExecutor(ExecutorEnum::SCRIPT));
     }
 
     protected function createScript($signature, $namespace, $path)
@@ -63,7 +64,7 @@ class MakeScriptCommand extends Command
             return;
         }
 
-        $stub = $this->getStubContent($namespace, 'script');
+        $stub = $this->getStubContent($namespace, ExecutorEnum::SCRIPT);
         $search = ['{$namespace}', '{$class}', '{$signature}'];
         $replace = [$namespace, $class, $signature];
         $stub = str_replace($search, $replace, $stub);

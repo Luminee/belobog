@@ -26,7 +26,7 @@
         "php": ">=7.0",
         "laravel/framework": "5.5.*",
         "luminee/foundry": "0.5.*",
-        "luminee/chariot": "0.5.5.*"
+        "luminee/chariot": "0.5.*"
     },
     "config": {
         "allow-plugins": {

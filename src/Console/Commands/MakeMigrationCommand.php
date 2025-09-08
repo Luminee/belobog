@@ -4,6 +4,7 @@ namespace Luminee\Belobog\Console\Commands;
 
 use Illuminate\Support\Str;
 use Luminee\Belobog\Console\Concerns\MakeConcern;
+use Luminee\Belobog\Enums\ExecutorEnum;
 use Luminee\Chariot\Console\Command;
 use Luminee\Foundry\Concerns\Directory;
 
@@ -43,7 +44,7 @@ class MakeMigrationCommand extends Command
 
         $this->initFilesystem();
 
-        $this->bootDir('migrations');
+        $this->bootDir(ExecutorEnum::MIGRATIONS);
     }
 
     /**
@@ -53,7 +54,7 @@ class MakeMigrationCommand extends Command
      */
     public function handle()
     {
-        $this->createMigration(...$this->prepareExecutor('migration'));
+        $this->createMigration(...$this->prepareExecutor(ExecutorEnum::MIGRATION));
     }
 
     protected function createMigration($migration, $namespace, $path)
@@ -63,7 +64,7 @@ class MakeMigrationCommand extends Command
             return;
         }
 
-        $stub = $this->getStubContent($namespace, 'migration');
+        $stub = $this->getStubContent($namespace, ExecutorEnum::MIGRATION);
         $search = ['{$namespace}', '{$class}', '{$table}'];
         $replace = [$namespace, $class, $this->getTable($migration)];
         $stub = str_replace($search, $replace, $stub);
