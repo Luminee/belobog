@@ -24,10 +24,10 @@
     "minimum-stability": "stable",
     "require": {
         "php": ">=7.0",
-        "laravel/framework": "5.5.*",
-        "luminee/foundry": "0.5.*",
-        "luminee/chariot": "0.5.*",
-        "luminee/switcher": "0.5.*"
+        "laravel/framework": ">=5.5",
+        "luminee/foundry": "^0.6",
+        "luminee/chariot": "^0.6",
+        "luminee/switcher": "^0.6"
     },
     "config": {
         "allow-plugins": {
