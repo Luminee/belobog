@@ -1,6 +1,6 @@
 <?php
 
-namespace Luminee\Belobog\Contracts;
+namespace Luminee\Belobog\Abstracts;
 
 use Illuminate\Database\Connection;
 use Illuminate\Support\Facades\DB;
@@ -39,8 +39,17 @@ abstract class Belobog
      */
     protected $localIteration = 0;
 
+    /**
+     * @var bool
+     */
     protected $run = false;
 
+    /**
+     * @param string $conn
+     * @param int    $iteration
+     * @param bool   $run
+     * @return void
+     */
     public function init($conn, $iteration, $run = false)
     {
         $this->connection = DB::connection();

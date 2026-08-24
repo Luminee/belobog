@@ -17,10 +17,10 @@ trait ExtendSeeder
         return $result;
     }
 
-    public function firstIdOrCreate(array $attributes, $fields = null)
+    public function firstIdOrCreate(array $attributes, ?array $fields = null)
     {
         $record = DB::table($this->table)->where($fields ?? $attributes)->first(['id']);
-        if (!$record) {
+        if ($record) {
             return $record->id;
         }
         return $this->create($attributes);
@@ -36,7 +36,7 @@ trait ExtendSeeder
         return $this->count() == 0;
     }
 
-    public function insert($values)
+    public function insert(array $values)
     {
         return DB::table($this->table)->insert($values);
     }

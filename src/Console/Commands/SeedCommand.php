@@ -73,7 +73,7 @@ class SeedCommand extends Command
      * Execute the console command.
      *
      * @return void
-     * @throws
+     * @throws \Exception
      */
     public function handle()
     {
@@ -83,20 +83,26 @@ class SeedCommand extends Command
 
         $this->handleDirectories($this->prepareDir($this->executor_dir));
 
-        $print = $this->prepareRunAndPrint();
+        $this->prepareRunAndPrint();
 
-        $this->switcherRun(function ($executor, $item, $conn) use ($print) {
+        $this->switcherRun(function ($executor, $item, $conn) {
             if (empty($class = $item['class'] ?? null) || !($class instanceof Seeder)) {
                 return;
             }
             $record = $item['record'] ?? null;
-            $class->init($conn, $print ? 0 : ($record->iteration ?? 0), $this->run);
+            $class->init($conn, $this->print ? 0 : ($record->iteration ?? 0), $this->run);
             $this->run ?
                 $this->seed($class, $executor, $record) :
                 $this->print($class, $executor, $record, $item['file']);
         }, explode(',', $this->option('conn') ?: DB::getDefaultConnection()));
     }
 
+    /**
+     * @param Seeder       $class
+     * @param string       $executor
+     * @param mixed|null   $record
+     * @return void
+     */
     protected function seed(Seeder $class, $executor, $record)
     {
         $class->run();
@@ -110,6 +116,13 @@ class SeedCommand extends Command
         $this->count++;
     }
 
+    /**
+     * @param Seeder       $class
+     * @param string       $executor
+     * @param mixed|null   $record
+     * @param string       $file
+     * @return void
+     */
     protected function print(Seeder $class, $executor, $record, $file)
     {
         if ($class->isUseIteration()) {

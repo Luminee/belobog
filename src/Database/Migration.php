@@ -3,8 +3,9 @@
 namespace Luminee\Belobog\Database;
 
 use Illuminate\Database\Query\Expression;
+use Illuminate\Support\Facades\Schema;
 use Luminee\Belobog\Concerns\ExtendColumn;
-use Luminee\Belobog\Contracts\Migration as MigrationContract;
+use Luminee\Belobog\Abstracts\Migration as MigrationContract;
 
 /**
  * Class Migration
@@ -59,10 +60,21 @@ class Migration extends MigrationContract
 
     /**
      * Run up the database migrations.
+     * 默认桥接到 run()，兼容旧脚本；新脚本可直接覆盖此方法。
      *
      * @return void
      */
-    public function up() {}
+    public function up()
+    {
+        $this->run();
+    }
+
+    /**
+     * Run the database migrations (旧脚本兼容入口).
+     *
+     * @return void
+     */
+    public function run() {}
 
     /**
      * Run down the database migrations.
@@ -71,7 +83,33 @@ class Migration extends MigrationContract
      */
     public function down() {}
 
-    protected function comment($string)
+    /**
+     * Drop the table if exists.
+     *
+     * @return void
+     */
+    public function dropTable()
+    {
+        Schema::dropIfExists($this->table);
+    }
+
+    /**
+     * Use the original MySqlGrammar (belobog 默认使用原生，此方法为兼容旧调用).
+     *
+     * @return void
+     */
+    public function useOriginGrammar() {}
+
+    protected function maskFilter(string $column_name, ?string $after = null)
+    {
+        $column = $this->string($column_name, 1000)->nullable();
+        if (!is_null($after)) $column->after($after);
+
+        $filter = $this->integer($column_name . '_filter')->nullable();
+        if (!is_null($after)) $filter->after($after);
+    }
+
+    protected function comment(string $string)
     {
         if ($this->conn == 'dev') {
             $this->column->comment($string);
@@ -79,6 +117,10 @@ class Migration extends MigrationContract
         return $this;
     }
 
+    /**
+     * @param mixed $raw
+     * @return Expression
+     */
     protected function raw($raw)
     {
         return new Expression($raw);

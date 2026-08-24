@@ -68,7 +68,7 @@ class MigrateCommand extends Command
      * Execute the console command.
      *
      * @return void
-     * @throws
+     * @throws \Exception
      */
     public function handle()
     {
@@ -89,6 +89,12 @@ class MigrateCommand extends Command
         }, explode(',', $this->option('conn') ?: DB::getDefaultConnection()));
     }
 
+    /**
+     * @param Migration     $class
+     * @param string        $name
+     * @param mixed|null    $record
+     * @return void
+     */
     protected function print(Migration $class, $name, $record)
     {
         list($output, $pretty, $ite) = $class->prepare();
@@ -109,9 +115,9 @@ class MigrateCommand extends Command
     }
 
     /**
-     * @param Migration $class
-     * @param $name
-     * @param $record
+     * @param Migration     $class
+     * @param string        $name
+     * @param mixed|null    $record
      * @return void
      */
     protected function migrate(Migration $class, $name, $record)

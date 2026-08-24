@@ -3,7 +3,7 @@
 namespace Luminee\Belobog\Database;
 
 use Luminee\Belobog\Concerns\ExtendSeeder;
-use Luminee\Belobog\Contracts\Seeder as SeederContract;
+use Luminee\Belobog\Abstracts\Seeder as SeederContract;
 
 class Seeder extends SeederContract
 {

@@ -6,17 +6,17 @@ use Illuminate\Support\Facades\DB;
 
 trait ExtendColumn
 {
-    protected function t_id($string)
+    protected function t_id(string $string)
     {
         return $this->integer($string . '_id');
     }
 
-    protected function idx_id($string)
+    protected function idx_id(string $string)
     {
         return $this->index($string . '_id');
     }
 
-    protected function kv_pair($k_null = false, $v_null = false)
+    protected function kv_pair(bool $k_null = false, bool $v_null = false)
     {
         $key = $this->string('key');
         if ($k_null) $key->nullable();
@@ -25,7 +25,7 @@ trait ExtendColumn
         if ($v_null) $value->nullable();
     }
 
-    protected function morphs($name, $index = true, $null = false)
+    protected function morphs(string $name, bool $index = true, bool $null = false)
     {
         list($id, $type) = ["{$name}_id", "{$name}_type"];
         $this->unsignedInteger($id);
@@ -39,7 +39,7 @@ trait ExtendColumn
         return $this->decimal('sort', 15, 8);
     }
 
-    protected function timestamps($useCurrent = false, $nullable = true, $on_update = false)
+    protected function timestamps(bool $useCurrent = false, bool $nullable = true, bool $on_update = false)
     {
         $created_at = $this->timestamp('created_at');
         if ($useCurrent) $created_at->useCurrent();

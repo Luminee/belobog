@@ -1,7 +1,8 @@
 <?php
 
-namespace Luminee\Belobog\Contracts;
+namespace Luminee\Belobog\Abstracts;
 
+use Closure;
 use Exception;
 use Illuminate\Support\Facades\DB;
 
@@ -23,7 +24,7 @@ abstract class Seeder extends Belobog
         return $this->useIteration;
     }
 
-    protected function newIteration($closure = null)
+    protected function newIteration(?Closure $closure = null)
     {
         $this->localIteration++;
         if ($this->run && $closure && $this->localIteration > $this->iteration) {
@@ -31,9 +32,9 @@ abstract class Seeder extends Belobog
         }
     }
 
-    protected function checkColumns($attributes)
+    protected function checkColumns(array $attributes)
     {
-        $column_map = $this->getColumnsInfomation();
+        $column_map = $this->getColumnsInformation();
         $columns = array_column($column_map, 'COLUMN_NAME');
         $checkTimestamp = count(array_diff($this->timeFields, $columns)) == 0;
         foreach ($column_map as $column) {
@@ -55,7 +56,7 @@ abstract class Seeder extends Belobog
         return $attributes;
     }
 
-    protected function fillAttributesIfNull($column, $attributes, $name)
+    protected function fillAttributesIfNull(\stdClass $column, array &$attributes, string $name)
     {
         if (!is_null($column->CHARACTER_MAXIMUM_LENGTH)) {
             $attributes[$name] = '';
@@ -68,7 +69,7 @@ abstract class Seeder extends Belobog
         }
     }
 
-    protected function getColumnsInfomation()
+    protected function getColumnsInformation()
     {
         $table_columns = 'information_schema.COLUMNS';
         $raw = 'column_name, is_nullable, character_maximum_length, numeric_precision, datetime_precision';

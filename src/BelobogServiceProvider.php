@@ -7,7 +7,7 @@ use Luminee\Belobog\Console\Commands\MakeScriptCommand;
 use Luminee\Belobog\Console\Commands\MakeSeederCommand;
 use Luminee\Belobog\Console\Commands\MigrateCommand;
 use Luminee\Belobog\Console\Commands\SeedCommand;
-use Luminee\Foundry\Contracts\ServiceProvider;
+use Luminee\Foundry\Abstracts\ServiceProvider;
 
 class BelobogServiceProvider extends ServiceProvider
 {

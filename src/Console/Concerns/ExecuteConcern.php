@@ -3,7 +3,7 @@
 namespace Luminee\Belobog\Console\Concerns;
 
 use Illuminate\Support\Facades\DB;
-use Luminee\Belobog\Belobog;
+use Luminee\Switcher\Switcher;
 
 trait ExecuteConcern
 {
@@ -12,20 +12,44 @@ trait ExecuteConcern
      */
     protected $switcher;
 
+    /**
+     * @var array
+     */
     protected $executors = [];
 
+    /**
+     * @var string
+     */
     protected $executor_dir;
 
+    /**
+     * @var string
+     */
     protected $executor_namespace;
 
+    /**
+     * @var int
+     */
     protected $batch;
 
+    /**
+     * @var int
+     */
     protected $count;
 
+    /**
+     * @var bool
+     */
     protected $run = false;
 
+    /**
+     * @var bool
+     */
     protected $print = false;
 
+    /**
+     * @var array
+     */
     protected $configs = [
         'action' => '',
         'table_name' => '',
@@ -33,11 +57,15 @@ trait ExecuteConcern
         'create_file_name' => '',
     ];
 
+    /**
+     * @param string $dir
+     * @return string
+     */
     protected function prepareDir($dir)
     {
         if ($this->argument('directory')) {
-            $stulied = $this->stulyDirectory($this->argument('directory'));
-            $dir .=  '/' . implode('/', $stulied);
+            $studlied = $this->studlyDirectory($this->argument('directory'));
+            $dir .=  '/' . implode('/', $studlied);
         }
         return $dir;
     }
@@ -45,11 +73,15 @@ trait ExecuteConcern
     protected function prepareRunAndPrint()
     {
         $this->run = $this->option('run');
-        if ($this->print = $this->option('print') || $this->option('pretty')) {
+        if ($this->print = ($this->option('print') || $this->option('pretty'))) {
             $this->run = false;
         }
     }
 
+    /**
+     * @param string $filePath
+     * @return string|false|null
+     */
     protected function getClassNameFromFile($filePath)
     {
         $namespace = '';
@@ -67,6 +99,10 @@ trait ExecuteConcern
         return false;
     }
 
+    /**
+     * @param string $conn
+     * @return void
+     */
     protected function prepareExecutorsTable($conn)
     {
         $this->createExecutorTable($conn);
@@ -79,6 +115,7 @@ trait ExecuteConcern
     /**
      * Create executor table.
      *
+     * @param string $conn
      * @return bool
      */
     protected function createExecutorTable($conn)
@@ -86,14 +123,19 @@ trait ExecuteConcern
         if (!empty(DB::select("Show tables like '{$this->configs['table_name']}'"))) {
             return true;
         }
-        $base_path = foundry(Belobog::VENDOR_NAME)->base_path;
+        $base_path = vendor('luminee/belobog')->base_path;
         $executor_file = realpath($base_path . '/database/' . $this->configs['create_file_name']);
-        $class = require_once $executor_file;
+        $class = require $executor_file;
         $class->init($conn, 0);
         $class->up();
         $class->build();
     }
 
+    /**
+     * @param callable $execute
+     * @param array    $connections
+     * @return void
+     */
     protected function switcherRun($execute, $connections)
     {
         foreach ($connections as $conn) {
@@ -116,7 +158,8 @@ trait ExecuteConcern
     /**
      * Handle directories.
      *
-     * @param $dir
+     * @param string $dir
+     * @return void
      */
     protected function handleDirectories($dir)
     {
@@ -138,7 +181,8 @@ trait ExecuteConcern
     /**
      * Get class for executor.
      * 
-     * @param $file
+     * @param string $file
+     * @return void
      */
     protected function instanceExecutor($file)
     {
@@ -148,7 +192,7 @@ trait ExecuteConcern
             return;
         }
         if ($classname === null) {
-            $class = require_once $file;
+            $class = require $file;
         } else {
             $base_class_name = basename(str_replace('\\', '/', $classname));
             if ($this->option('class') && $base_class_name != $this->option('class')) {
@@ -171,9 +215,10 @@ trait ExecuteConcern
     /**
      * Record executor.
      * 
-     * @param $class
-     * @param $record
-     * @param $ite
+     * @param string     $class
+     * @param mixed|null $record
+     * @param int        $ite
+     * @return void
      */
     protected function recordExecutor($class, $record, $ite)
     {

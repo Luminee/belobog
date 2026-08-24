@@ -57,6 +57,12 @@ class MakeMigrationCommand extends Command
         $this->createMigration(...$this->prepareExecutor(ExecutorEnum::MIGRATION));
     }
 
+    /**
+     * @param string $migration
+     * @param string $namespace
+     * @param string $path
+     * @return void
+     */
     protected function createMigration($migration, $namespace, $path)
     {
         $class = Str::studly($migration);
@@ -72,6 +78,10 @@ class MakeMigrationCommand extends Command
         $this->makeExecutorFile($migration, $path, $stub);
     }
 
+    /**
+     * @param string $migration
+     * @return string
+     */
     protected function getTable($migration)
     {
         if ($this->option('table')) {

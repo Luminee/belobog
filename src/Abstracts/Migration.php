@@ -1,6 +1,6 @@
 <?php
 
-namespace Luminee\Belobog\Contracts;
+namespace Luminee\Belobog\Abstracts;
 
 use Illuminate\Support\Fluent;
 use Illuminate\Database\Schema\Blueprint;
@@ -41,12 +41,24 @@ abstract class Migration extends Belobog
      */
     protected $updateAddition = false;
 
+    /**
+     * @var bool
+     */
     protected $strIndex = false;
 
+    /**
+     * @var array
+     */
     protected $modify = [];
 
+    /**
+     * @var bool
+     */
     protected $removeModifyPrimaryKey = false;
 
+    /**
+     * @var array
+     */
     protected $blueprintFuncList = [
         'bigIncrements',
         'bigInteger',
@@ -112,6 +124,9 @@ abstract class Migration extends Belobog
         'dropColumn'
     ];
 
+    /**
+     * @var array
+     */
     protected $fluentFuncList = [
         'after',
         'autoIncrement',
@@ -126,6 +141,9 @@ abstract class Migration extends Belobog
         'change'
     ];
 
+    /**
+     * @var array
+     */
     protected $fluentIgnoreFuncList = [
         'comment'
     ];
@@ -157,6 +175,10 @@ abstract class Migration extends Belobog
         return [$output, $pretty, $this->localIteration];
     }
 
+    /**
+     * @param string $statement
+     * @return array
+     */
     protected function pretty($statement)
     {
         if (strpos($statement, 'create table') !== 0) {
@@ -202,6 +224,10 @@ abstract class Migration extends Belobog
         return $this->statements;
     }
 
+    /**
+     * @param string|null $table
+     * @return $this
+     */
     protected function table($table = null)
     {
         if (is_null($table))
@@ -217,6 +243,10 @@ abstract class Migration extends Belobog
         return $this;
     }
 
+    /**
+     * @param string|null $table
+     * @return $this
+     */
     protected function create($table = null)
     {
         $this->table($table);
@@ -224,6 +254,10 @@ abstract class Migration extends Belobog
         return $this;
     }
 
+    /**
+     * @param string $engine
+     * @return $this
+     */
     protected function engine($engine = 'InnoDB')
     {
         $this->blueprint->engine = $engine;
@@ -242,6 +276,10 @@ abstract class Migration extends Belobog
         return $this;
     }
 
+    /**
+     * @param string|array $columns
+     * @return $this
+     */
     protected function modify($columns)
     {
         is_array($columns) ?
@@ -256,6 +294,10 @@ abstract class Migration extends Belobog
         return $this;
     }
 
+    /**
+     * @param string $statement
+     * @return string
+     */
     private function modifyStatement($statement)
     {
         if ($this->removeModifyPrimaryKey)
@@ -271,9 +313,9 @@ abstract class Migration extends Belobog
     }
 
     /**
-     * @param $method
-     * @param $args
-     * @return $this | Blueprint
+     * @param string $method
+     * @param array  $args
+     * @return $this
      */
     public function __call($method, $args)
     {

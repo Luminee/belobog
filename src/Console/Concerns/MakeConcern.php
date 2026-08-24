@@ -19,6 +19,10 @@ trait MakeConcern
      */
     protected $executor_namespace;
 
+    /**
+     * @param string $executor
+     * @return void
+     */
     protected function bootDir($executor)
     {
         $this->executor_dir = realpath($dir = config("belobog.$executor.dir"));
@@ -38,12 +42,12 @@ trait MakeConcern
         $dir = $this->executor_dir;
         $namespace = $this->executor_namespace;
         if ($executor = $this->argument($executor_arg_name)) {
-            $stulied = $this->stulyDirectory($this->argument('directory'));
-            $dir .=  '/' . implode('/', $stulied);
+            $studlied = $this->studlyDirectory($this->argument('directory'));
+            $dir .=  '/' . implode('/', $studlied);
             $this->makeDirectory($dir);
 
             if ($namespace) {
-                $namespace .= '\\' . implode('\\', $stulied);
+                $namespace .= '\\' . implode('\\', $studlied);
             }
         } else {
             $executor = $this->argument('directory');
@@ -52,6 +56,11 @@ trait MakeConcern
         return [$executor, $namespace, $dir];
     }
 
+    /**
+     * @param string $namespace
+     * @param string $class
+     * @return bool
+     */
     protected function checkFullClassExists($namespace, $class)
     {
         if ($namespace) {
@@ -64,6 +73,11 @@ trait MakeConcern
         return false;
     }
 
+    /**
+     * @param string|null $namespace
+     * @param string      $stub_name
+     * @return string
+     */
     protected function getStubContent($namespace, $stub_name)
     {
         $anonymous_dir = $namespace && !$this->option('anonymous') ? '' : '/anonymous';
@@ -71,6 +85,12 @@ trait MakeConcern
         return $this->files->get($stub_file);
     }
 
+    /**
+     * @param string $executor
+     * @param string $path
+     * @param string $stub
+     * @return void
+     */
     protected function makeExecutorFile($executor, $path, $stub)
     {
         $name = date('Y_m_d_His') . '_' . $executor;

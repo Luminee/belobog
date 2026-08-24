@@ -54,7 +54,7 @@ class MakeSeederCommand extends Command
      * Execute the console command.
      *
      * @return void
-     * @throws
+     * @throws \Exception
      */
     public function handle()
     {
@@ -62,9 +62,10 @@ class MakeSeederCommand extends Command
     }
 
     /**
-     * @param $seeder
-     * @param $namespace
-     * @param $path
+     * @param string $seeder
+     * @param string $namespace
+     * @param string $path
+     * @return void
      */
     protected function createSeeder($seeder, $namespace, $path)
     {

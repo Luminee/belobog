@@ -56,6 +56,12 @@ class MakeScriptCommand extends Command
         $this->createScript(...$this->prepareExecutor(ExecutorEnum::SCRIPT));
     }
 
+    /**
+     * @param string $signature
+     * @param string $namespace
+     * @param string $path
+     * @return void
+     */
     protected function createScript($signature, $namespace, $path)
     {
         $script = str_replace([':', '-'], '_', $signature);
